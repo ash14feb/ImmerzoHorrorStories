@@ -1,7 +1,4 @@
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
-import * as THREE from 'three';
-import { useEffect, useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import type { VideoProject } from '../types';
 
@@ -10,55 +7,10 @@ interface VideoViewerProps {
   onClose: () => void;
 }
 
-function VideoSphere({ url, onReady }: { url: string; onReady: () => void }) {
-  const [video] = useState(() => {
-    const vid = document.createElement('video');
-    vid.crossOrigin = 'Anonymous';
-    vid.loop = true;
-    vid.muted = false; // We want audio
-    vid.playsInline = true;
-    vid.src = url;
-    return vid;
-  });
-
-  useEffect(() => {
-    let mounted = true;
-
-    const handleCanPlay = () => {
-      if (mounted) {
-        onReady();
-        video.play().catch((err) => console.error("Video playback failed:", err));
-      }
-    };
-
-    video.addEventListener('canplay', handleCanPlay);
-    video.load();
-
-    return () => {
-      mounted = false;
-      video.removeEventListener('canplay', handleCanPlay);
-      video.pause();
-      video.src = '';
-      video.load();
-    };
-  }, [video, onReady, url]);
-
-  return (
-    <mesh scale={[-1, 1, 1]}>
-      {/* 
-        We use scale={[-1, 1, 1]} instead of side={THREE.BackSide} to mirror 
-        the inside of the sphere, ensuring correct left/right orientation for 360 videos 
-      */}
-      <sphereGeometry args={[500, 60, 40]} />
-      <meshBasicMaterial>
-        <videoTexture attach="map" args={[video]} colorSpace={THREE.SRGBColorSpace} />
-      </meshBasicMaterial>
-    </mesh>
-  );
-}
-
 export function VideoViewer({ project, onClose }: VideoViewerProps) {
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   if (!project.videoUrl) {
     return (
@@ -76,6 +28,19 @@ export function VideoViewer({ project, onClose }: VideoViewerProps) {
     );
   }
 
+  const handleError = () => {
+    setLoading(false);
+    if (videoRef.current?.error) {
+      if (videoRef.current.error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
+        setErrorMsg("Your browser does not support this video format (HEVC). Please try a different browser like Safari, or download the video.");
+      } else {
+        setErrorMsg(`Video error: ${videoRef.current.error.message || videoRef.current.error.code}`);
+      }
+    } else {
+      setErrorMsg("Video playback failed.");
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-black animate-in fade-in duration-300">
       {/* Header / Controls overlay */}
@@ -84,9 +49,6 @@ export function VideoViewer({ project, onClose }: VideoViewerProps) {
           <h2 className="text-xl font-bold text-white shadow-black drop-shadow-md">
             {project.title}
           </h2>
-          <p className="text-sm text-zinc-300 shadow-black drop-shadow-md">
-            Drag to look around
-          </p>
         </div>
         <button
           onClick={onClose}
@@ -97,24 +59,54 @@ export function VideoViewer({ project, onClose }: VideoViewerProps) {
         </button>
       </div>
 
-      {loading && (
-        <div className="absolute inset-0 z-0 flex flex-col items-center justify-center text-red-500 gap-4">
-          <Loader2 className="h-12 w-12 animate-spin" />
-          <p className="font-medium tracking-widest text-zinc-400 uppercase text-sm">Loading Experience</p>
+      {errorMsg ? (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/90 backdrop-blur-md p-6 text-center gap-6">
+          <p className="text-xl font-medium text-red-400 max-w-lg">{errorMsg}</p>
+          <div className="flex gap-4">
+            <a 
+              href={project.videoUrl}
+              download
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-lg bg-zinc-800 px-6 py-3 font-medium text-white transition-colors hover:bg-zinc-700"
+            >
+              Download Video Instead
+            </a>
+            <button 
+              onClick={onClose}
+              className="rounded-lg bg-red-600 px-6 py-3 font-medium text-white transition-colors hover:bg-red-700"
+            >
+              Close Viewer
+            </button>
+          </div>
         </div>
-      )}
+      ) : (
+        <>
+          {loading && (
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm text-red-500 gap-4 pointer-events-none">
+              <Loader2 className="h-12 w-12 animate-spin" />
+              <p className="font-medium tracking-widest text-zinc-400 uppercase text-sm">Loading Experience</p>
+            </div>
+          )}
 
-      {/* 360 Canvas */}
-      <div className="h-full w-full cursor-move">
-        <Canvas camera={{ position: [0, 0, 0.1], fov: 80 }}>
-          <OrbitControls 
-            enableZoom={false}
-            enablePan={false}
-            rotateSpeed={-0.5} // Invert rotation since we are inside the sphere
-          />
-          <VideoSphere url={project.videoUrl} onReady={() => setLoading(false)} />
-        </Canvas>
-      </div>
+          {/* Standard Video Player */}
+          <div className="flex h-full w-full items-center justify-center bg-black">
+            <video
+              ref={videoRef}
+              src={project.videoUrl}
+              className="h-full w-full object-contain"
+              controls
+              autoPlay
+              playsInline
+              crossOrigin="anonymous"
+              onCanPlay={() => setLoading(false)}
+              onError={handleError}
+            >
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -72,7 +72,7 @@ export default function App() {
             <VideoCard
               key={project.id}
               project={project}
-              onPlay={setActiveProject}
+              onPlay={(p) => setActiveProject(p)}
             />
           ))}
         </div>
