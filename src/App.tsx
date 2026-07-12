@@ -3,15 +3,24 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import rawData from './data.json';
 import type { VideoProject } from './types';
-import { VideoCard } from './components/VideoCard';
 import { VideoViewer } from './components/VideoViewer';
-import { Skull } from 'lucide-react';
+import { VideoRow } from './components/VideoRow';
+import { Play, Info } from 'lucide-react';
 
 export default function App() {
   const [activeProject, setActiveProject] = useState<VideoProject | null>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 0);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Process data on initial load
   const projects: VideoProject[] = useMemo(() => {
@@ -33,49 +42,75 @@ export default function App() {
     });
   }, []);
 
+  const heroProject = projects[0];
+  
+  // Create some fake rows for Netflix feel
+  const trendingNow = projects.slice(1, 8);
+  const newReleases = projects.slice(8, 15);
+  const topPicks = projects.slice(15, 24);
+
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-red-900/30 bg-zinc-950/80 backdrop-blur-xl">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-20 items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-950 text-red-500 shadow-[0_0_15px_rgba(220,38,38,0.2)]">
-                <Skull className="h-7 w-7" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
-                  Immerzo
-                </h1>
-                <p className="text-xs font-medium uppercase tracking-widest text-red-500">
-                  Horror Room Stories
-                </p>
-              </div>
-            </div>
-          </div>
+    <div className="min-h-screen bg-black">
+      {/* Navbar */}
+      <header className={`fixed top-0 z-40 w-full transition-colors duration-300 ${isScrolled ? 'bg-black' : 'bg-gradient-to-b from-black/80 to-transparent'}`}>
+        <div className="px-4 sm:px-12 flex h-16 items-center gap-8">
+          <h1 className="text-2xl font-bold tracking-tight text-red-600 sm:text-3xl font-sans">
+            NETFLIX
+          </h1>
+          <nav className="hidden md:flex gap-4 text-sm font-medium text-zinc-300">
+            <a href="#" className="text-white hover:text-zinc-300 transition-colors">Home</a>
+            <a href="#" className="hover:text-zinc-300 transition-colors">TV Shows</a>
+            <a href="#" className="hover:text-zinc-300 transition-colors">Movies</a>
+            <a href="#" className="hover:text-zinc-300 transition-colors">New & Popular</a>
+            <a href="#" className="hover:text-zinc-300 transition-colors">My List</a>
+          </nav>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="mb-12">
-          <h2 className="text-3xl font-bold text-white mb-4">The Dark Library</h2>
-          <p className="max-w-2xl text-zinc-400">
-            Immersive 360° experiences designed to test your courage. 
-            Download the raw files or face the terror directly in your browser.
-            Headphones strongly recommended.
-          </p>
-        </div>
+      {/* Hero Section */}
+      {heroProject && (
+        <div className="relative h-[80vh] w-full">
+          <div className="absolute inset-0">
+            {heroProject.thumbnailUrl && (
+              <img 
+                src={heroProject.thumbnailUrl} 
+                alt={heroProject.title}
+                className="h-full w-full object-cover"
+              />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+          </div>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {projects.map((project) => (
-            <VideoCard
-              key={project.id}
-              project={project}
-              onPlay={(p) => setActiveProject(p)}
-            />
-          ))}
+          <div className="absolute bottom-[20%] left-4 sm:left-12 max-w-2xl">
+            <h1 className="text-4xl sm:text-6xl font-bold text-white mb-4 shadow-black drop-shadow-lg">
+              {heroProject.title}
+            </h1>
+            <p className="text-lg text-white mb-6 drop-shadow-md line-clamp-3">
+              {heroProject.description}
+            </p>
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => setActiveProject(heroProject)}
+                className="flex items-center gap-2 rounded bg-white px-6 py-2.5 text-lg font-bold text-black transition-colors hover:bg-neutral-300"
+              >
+                <Play className="h-6 w-6 fill-current" />
+                Play
+              </button>
+              <button className="flex items-center gap-2 rounded bg-zinc-500/70 px-6 py-2.5 text-lg font-bold text-white transition-colors hover:bg-zinc-500/50">
+                <Info className="h-6 w-6" />
+                More Info
+              </button>
+            </div>
+          </div>
         </div>
+      )}
+
+      {/* Main Content Rows */}
+      <main className="relative z-10 -mt-24 pb-12 overflow-hidden">
+        <VideoRow title="Trending Now" projects={trendingNow} onPlay={setActiveProject} />
+        <VideoRow title="New Releases" projects={newReleases} onPlay={setActiveProject} />
+        <VideoRow title="Top Picks for You" projects={topPicks} onPlay={setActiveProject} />
       </main>
 
       {/* Video Viewer Modal */}
