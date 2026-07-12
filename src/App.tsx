@@ -55,7 +55,7 @@ export default function App() {
       <header className={`fixed top-0 z-40 w-full transition-colors duration-300 ${isScrolled ? 'bg-black' : 'bg-gradient-to-b from-black/80 to-transparent'}`}>
         <div className="px-4 sm:px-12 flex h-16 items-center gap-8">
           <h1 className="text-2xl font-bold tracking-tight text-red-600 sm:text-3xl font-sans">
-            NETFLIX
+            IMMERZO
           </h1>
           <nav className="hidden md:flex gap-4 text-sm font-medium text-zinc-300">
             <a href="#" className="text-white hover:text-zinc-300 transition-colors">Home</a>
