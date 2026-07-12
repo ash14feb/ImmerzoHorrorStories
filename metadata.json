@@ -1,0 +1,6 @@
+{
+  "name": "Immerzo Horror Room Stories",
+  "description": "360 VR Horror video platform allowing users to download media or watch immersively.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
