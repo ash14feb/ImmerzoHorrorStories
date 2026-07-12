@@ -10,6 +10,7 @@ interface VideoViewerProps {
 export function VideoViewer({ project, onClose }: VideoViewerProps) {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [started, setStarted] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   if (!project.videoUrl) {
@@ -40,6 +41,30 @@ export function VideoViewer({ project, onClose }: VideoViewerProps) {
       setErrorMsg("Video playback failed.");
     }
   };
+
+  const handleStart = () => {
+    if (videoRef.current) {
+      videoRef.current.play().catch(console.error);
+      setStarted(true);
+    }
+  };
+
+  useEffect(() => {
+    // Try to auto-play when the component mounts
+    if (videoRef.current && project.videoUrl) {
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          setStarted(true);
+        }).catch(() => {
+          // Auto-play was prevented by the browser. 
+          // We leave started=false so the "Play" button overlay shows.
+          setStarted(false);
+          setLoading(false); 
+        });
+      }
+    }
+  }, [project.videoUrl]);
 
   return (
     <div className="fixed inset-0 z-50 bg-black animate-in fade-in duration-300">
@@ -89,6 +114,17 @@ export function VideoViewer({ project, onClose }: VideoViewerProps) {
             </div>
           )}
 
+          {!loading && !started && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+              <button
+                onClick={handleStart}
+                className="flex items-center gap-3 rounded-full bg-red-600 px-8 py-4 text-lg font-bold text-white transition-transform hover:scale-105 hover:bg-red-500"
+              >
+                Start Video with Audio
+              </button>
+            </div>
+          )}
+
           {/* Standard Video Player */}
           <div className="flex h-full w-full items-center justify-center bg-black">
             <video
@@ -96,10 +132,10 @@ export function VideoViewer({ project, onClose }: VideoViewerProps) {
               src={project.videoUrl}
               className="h-full w-full object-contain"
               controls
-              autoPlay
               playsInline
-              crossOrigin="anonymous"
-              onCanPlay={() => setLoading(false)}
+              onCanPlay={() => {
+                if (!started) setLoading(false);
+              }}
               onError={handleError}
             >
               Your browser does not support the video tag.
